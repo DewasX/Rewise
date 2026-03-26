@@ -1,0 +1,37 @@
+# macOS
+.DS_Store
+
+# Flutter / Dart
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/pubspec.lock
+**/analysis_options.yaml
+**/*.iml
+
+# Android
+**/.gradle/
+**/local.properties
+**/.idea/
+
+# iOS
+**/Pods/
+**/.symlinks/
+**/xcuserdata/
+**/DerivedData/
+**/*.xcworkspace
+
+# Logs and temporary files
+flutter_sdk/
+*.log
+*.zip
+*.tar.gz
+*.tmp
+
+# Environment variables
+**/.env
+**/.env.*

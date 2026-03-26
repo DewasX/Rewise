@@ -1,0 +1,41 @@
+name: rewise_app
+description: AI Adaptive Repetition & Automatic Study Planner
+version: 1.2.0+4
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.0.0
+  flutter_riverpod: ^2.6.1
+  go_router: ^12.1.3
+  google_sign_in: ^6.3.0
+  sign_in_with_apple: ^6.1.4
+  intl: ^0.19.0
+  flutter_local_notifications: ^17.1.2
+  shared_preferences: ^2.5.4
+  uuid: ^4.5.3
+  share_plus: ^10.1.4
+  path_provider: ^2.1.5
+  flutter_local_notifications_linux: ^4.0.1
+  timezone: ^0.9.4
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.png"
+  min_sdk_android: 21
