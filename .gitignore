@@ -23,7 +23,6 @@
 **/.symlinks/
 **/xcuserdata/
 **/DerivedData/
-**/*.xcworkspace
 
 # Logs and temporary files
 flutter_sdk/
