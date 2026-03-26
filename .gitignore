@@ -9,8 +9,6 @@
 **/.packages
 **/.pub-cache/
 **/.pub/
-**/pubspec.lock
-**/analysis_options.yaml
 **/*.iml
 
 # Android
