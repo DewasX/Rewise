@@ -142,19 +142,25 @@
         </div>
     </section>
     <!-- Feedback Form -->
-    <section id="feedback" class="container text-center">
-        <h2>We value your feedback</h2>
-        <form action="https://formspree.io/f/xojpqrko" method="POST" class="feedback-form">
-            <label>
-                Your email:
-                <input type="email" name="email" required placeholder="you@example.com" />
-            </label>
-            <label>
-                Your message:
-                <textarea name="message" required placeholder="Your thoughts..."></textarea>
-            </label>
-            <button type="submit" class="btn btn-primary btn-large">Send</button>
-        </form>
+    <section id="feedback" class="container container-sm" style="padding-bottom: 6rem; padding-top: 4rem;">
+        <div class="feedback-card">
+            <div class="text-center mb-4">
+                <span class="badge">Got thoughts?</span>
+                <h2 style="margin-bottom: 0.5rem; font-size: 2rem;">Send us Feedback</h2>
+                <p class="opacity-60">We read every single message to make Rewise better.</p>
+            </div>
+            <form action="https://formspree.io/f/xojpqrko" method="POST" class="feedback-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required placeholder="you@example.com" class="form-input" />
+                </div>
+                <div class="form-group">
+                    <label for="message">Your Message</label>
+                    <textarea id="message" name="message" required placeholder="Tell us what you think..." class="form-input form-textarea" rows="4"></textarea>
+                </div>
+                <button type="submit" class="btn btn-orange btn-xl mt-2">Send Feedback</button>
+            </form>
+        </div>
     </section>
 
     <!-- Footer -->
