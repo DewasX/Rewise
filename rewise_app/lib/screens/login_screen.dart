@@ -219,17 +219,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Center(
+                    child: Image.asset(
+                      'assets/icon.png',
+                      height: 100,
+                      width: 100,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   const Text(
                     'Rewise.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'AI Adaptive Repetition',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
-              ),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'AI Adaptive Repetition',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+                  ),
               const SizedBox(height: 48),
               TextField(
                 controller: _emailController,

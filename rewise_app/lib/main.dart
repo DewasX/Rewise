@@ -23,10 +23,10 @@ void main() async {
 
   // Load initial settings
   final prefs = await SharedPreferences.getInstance();
-  final themeStr = prefs.getString('pref_theme') ?? 'system';
-  final initialThemeMode = themeStr == 'dark' 
-      ? ThemeMode.dark 
-      : (themeStr == 'light' ? ThemeMode.light : ThemeMode.system);
+  final themeStr = prefs.getString('pref_theme') ?? 'dark';
+  final initialThemeMode = themeStr == 'system' 
+      ? ThemeMode.system 
+      : (themeStr == 'light' ? ThemeMode.light : ThemeMode.dark);
 
   runApp(
     ProviderScope(
@@ -63,38 +63,48 @@ class _RewiseAppState extends ConsumerState<RewiseApp> {
 
   void _setupAuthListener() {
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (!mounted) return;
+      
       final session = data.session;
       final event = data.event;
 
+      debugPrint('Auth Event: $event, Session: ${session != null}');
+
       if (event == AuthChangeEvent.passwordRecovery) {
         navigatorKey.currentState?.pushReplacementNamed("/reset-password");
-      } else if (session != null && (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.initialSession)) {
-        try {
-          final currentRoute = ModalRoute.of(navigatorKey.currentContext!)?.settings.name;
-          if (currentRoute != '/dashboard') {
-            navigatorKey.currentState?.pushReplacementNamed("/dashboard");
-          }
-        } catch (_) {
-          navigatorKey.currentState?.pushReplacementNamed("/dashboard");
-        }
-      } else if (session == null && event != AuthChangeEvent.initialSession) {
-        navigatorKey.currentState?.pushReplacementNamed("/login");
+        return;
+      }
+
+      // Handle all login/logout/initial states
+      if (session != null) {
+        // Logged in
+        _navigateSafe("/dashboard");
+      } else {
+        // Not logged in
+        _navigateSafe("/login");
       }
     });
   }
 
+  void _navigateSafe(String routeName) {
+    if (navigatorKey.currentState == null) return;
+    
+    // Only navigate if we're not already there
+    final currentRoute = ModalRoute.of(navigatorKey.currentContext!)?.settings.name;
+    if (currentRoute != routeName) {
+      navigatorKey.currentState?.pushReplacementNamed(routeName);
+    }
+  }
+
   void _checkInitialSession() {
-    Future.delayed(const Duration(milliseconds: 500), () {
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session == null) {
-        try {
-          final currentRoute = ModalRoute.of(navigatorKey.currentContext!)?.settings.name;
-          if (currentRoute == '/splash') {
-            navigatorKey.currentState?.pushReplacementNamed("/login");
-          }
-        } catch (_) {
-          navigatorKey.currentState?.pushReplacementNamed("/login");
-        }
+    // This is now handled by the listener, but we can keep a fallback 
+    // in case the initial event is missed (rare with supabase_flutter)
+    Future.delayed(const Duration(seconds: 2), () {
+      if (navigatorKey.currentState == null) return;
+      final currentRoute = ModalRoute.of(navigatorKey.currentContext!)?.settings.name;
+      if (currentRoute == '/splash') {
+        final session = Supabase.instance.client.auth.currentSession;
+        navigatorKey.currentState?.pushReplacementNamed(session != null ? "/dashboard" : "/login");
       }
     });
   }

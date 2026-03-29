@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/design_system.dart';
 import '../core/providers.dart';
 import '../core/offline_sync_service.dart';
 import 'profile_settings_screen.dart';
 import 'change_password_screen.dart';
-import 'connected_accounts_screen.dart';
-import 'connected_accounts_screen.dart';
 import 'export_data_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'app_preferences_screen.dart';
 import 'delete_account_screen.dart';
+import '../core/revenuecat_service.dart';
 
 class AccountSettingsScreen extends ConsumerWidget {
   const AccountSettingsScreen({super.key});
@@ -20,6 +21,7 @@ class AccountSettingsScreen extends ConsumerWidget {
     final userProfile = ref.watch(userProfileProvider);
     final userName = userProfile.value?['name'] ?? 'Account';
     final userEmail = Supabase.instance.client.auth.currentUser?.email ?? '';
+    final isPro = ref.watch(isProUserProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -40,6 +42,17 @@ class AccountSettingsScreen extends ConsumerWidget {
           _buildProfileCard(context, userName, userEmail),
           const SizedBox(height: 24),
 
+          // ── Subscription ──────────────────────────────────────────────────
+          _sectionLabel(context, 'Subscription'),
+          if (isPro)
+            _tile(context, Icons.star_rounded, 'Rewise Pro Active', 'Manage your subscription', 
+              () => RevenueCatService.presentCustomerCenter(), color: AppColors.primary)
+          else
+            _tile(context, Icons.star_border_rounded, 'Upgrade to Rewise Pro', 'Unlock premium features', 
+              () => RevenueCatService.presentPaywall(), color: AppColors.primary),
+
+          const SizedBox(height: 24),
+
           // ── Account section ───────────────────────────────────────────────
           _sectionLabel(context, 'Account'),
           _tile(context, Icons.person_outline, 'Profile',
@@ -50,10 +63,6 @@ class AccountSettingsScreen extends ConsumerWidget {
               'Update your login password',
               () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const ChangePasswordScreen()))),
-          _tile(context, Icons.link, 'Connected Accounts',
-              'View your login providers',
-              () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const ConnectedAccountsScreen()))),
 
           const SizedBox(height: 24),
 
@@ -63,6 +72,14 @@ class AccountSettingsScreen extends ConsumerWidget {
               'Theme',
               () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const AppPreferencesScreen()))),
+          _tile(context, Icons.feedback_outlined, 'Send Feedback',
+              'Report a bug or share your thoughts',
+              () async {
+                final uri = Uri.parse('https://dewasx.github.io/rewise-landing/#feedback');
+                if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                  debugPrint('Could not launch \$uri');
+                }
+              }),
 
           const SizedBox(height: 24),
 
@@ -84,6 +101,9 @@ class AccountSettingsScreen extends ConsumerWidget {
   }
 
   Widget _buildProfileCard(BuildContext context, String name, String email) {
+    final userMeta = Supabase.instance.client.auth.currentUser?.userMetadata;
+    final avatarUrl = userMeta?['avatar_url'] ?? userMeta?['picture'];
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -96,13 +116,16 @@ class AccountSettingsScreen extends ConsumerWidget {
           CircleAvatar(
             radius: 28,
             backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-            child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: const TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold),
-            ),
+            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+            child: avatarUrl != null && avatarUrl.isNotEmpty 
+              ? const SizedBox.shrink()
+              : Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold),
+                ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -191,9 +214,13 @@ class AccountSettingsScreen extends ConsumerWidget {
     try {
       await OfflineSyncService().syncPendingReviews();
     } catch (_) {}
+    // Clear local cached data to prevent data leaking between accounts
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('cached_todays_topics');
+    await prefs.remove('offline_pending_reviews');
     await Supabase.instance.client.auth.signOut();
     if (context.mounted) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
   }
 }

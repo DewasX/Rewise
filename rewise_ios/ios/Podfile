@@ -40,4 +40,30 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
   end
+
+  # ── Fix objective_c.framework platform tag ──
+  # Flutter's native-assets build system tags objective_c.framework as
+  # IOSSIMULATOR instead of IOS, which causes App Store validation to fail.
+  # This script phase re-tags the binary so Archive + Distribute works.
+  main_project = installer.aggregate_targets.first.user_project
+  runner_target = main_project.targets.find { |t| t.name == 'Runner' }
+  if runner_target
+    phase_name = '[CP] Fix objective_c.framework platform tag'
+    unless runner_target.shell_script_build_phases.any? { |p| p.name == phase_name }
+      phase = runner_target.new_shell_script_build_phase(phase_name)
+      phase.shell_script = <<~SCRIPT
+        FW_PATH="${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/objective_c.framework/objective_c"
+        if [ -f "$FW_PATH" ]; then
+          PLATFORM=$(vtool -show "$FW_PATH" 2>/dev/null | grep 'platform ' | head -1 | awk '{print $2}')
+          if [ "$PLATFORM" = "IOSSIMULATOR" ]; then
+            vtool -set-build-version ios 14.0 26.2 -replace -output "$FW_PATH" "$FW_PATH"
+            echo "Fixed objective_c.framework platform tag from IOSSIMULATOR to IOS"
+          fi
+        fi
+      SCRIPT
+      phase.input_paths = []
+      phase.output_paths = []
+      main_project.save
+    end
+  end
 end

@@ -68,16 +68,26 @@ class OfflineSyncService {
           'repetition_count': repCount + 1,
         }).eq('id', topicId).or('last_reviewed_at.lte.$safeFallbackDate,last_reviewed_at.is.null');
 
-        await client.from('review_history').insert({
-          'topic_id': topicId,
-          'user_id': client.auth.currentUser?.id,
-          'rating': ratingValue,
-          'interval_before': data['interval_days'] ?? 1, // Fallback for old queued items
-          'interval_after': newInterval,
-          'retention_before': 0.0, // Could be evaluated via payload injection if needed later
-          'retention_after': 1.0,
-          'created_at': exactReviewTime.toUtc().toIso8601String(),
-        });
+        // Dedup check: skip insert if a review with the same topic+timestamp already exists
+        final existing = await client
+            .from('review_history')
+            .select('id')
+            .eq('topic_id', topicId)
+            .eq('created_at', exactReviewTime.toUtc().toIso8601String())
+            .maybeSingle();
+
+        if (existing == null) {
+          await client.from('review_history').insert({
+            'topic_id': topicId,
+            'user_id': client.auth.currentUser?.id,
+            'rating': ratingValue,
+            'interval_before': data['interval_days'] ?? 1,
+            'interval_after': newInterval,
+            'retention_before': 0.0,
+            'retention_after': 1.0,
+            'created_at': exactReviewTime.toUtc().toIso8601String(),
+          });
+        }
       } catch (e) {
         failedTries.add(item); // Keep in queue if sync fails
       }

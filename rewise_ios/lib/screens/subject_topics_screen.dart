@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/design_system.dart';
 import '../core/providers.dart';
 import '../models/topic.dart';
@@ -29,10 +30,31 @@ class SubjectTopicsScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(8.0),
           child: CircleAvatar(
             backgroundColor: Theme.of(context).colorScheme.surface,
-            child: IconButton(
-              icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color, size: 20),
-              onPressed: () => Navigator.pop(context),
-            ),
+            backgroundImage: () {
+              final userMeta = Supabase.instance.client.auth.currentUser?.userMetadata;
+              final avatarUrl = userMeta?['avatar_url'] ?? userMeta?['picture'];
+              return avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null;
+            }(),
+            child: Builder(builder: (context) {
+              final userMeta = Supabase.instance.client.auth.currentUser?.userMetadata;
+              final avatarUrl = userMeta?['avatar_url'] ?? userMeta?['picture'];
+              if (avatarUrl != null && avatarUrl.isNotEmpty) {
+                 return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                );
+              }
+              return IconButton(
+                icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color, size: 20),
+                onPressed: () => Navigator.pop(context),
+              );
+            }),
           ),
         ),
         title: Text(subjectName,

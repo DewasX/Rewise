@@ -85,13 +85,13 @@ class Topic {
 
   factory Topic.fromJson(Map<String, dynamic> json) {
     return Topic(
-      id: json['id'],
-      userId: json['user_id'],
-      subjectId: json['subject_id'],
-      topicName: json['name'],
+      id: json['id'] ?? '',
+      userId: json['user_id'] ?? '',
+      subjectId: json['subject_id'] ?? '',
+      topicName: json['name'] ?? 'Untitled',
       estimatedMinutes: json['estimated_minutes'] ?? 5,
       difficultyLevel: json['difficulty'] ?? 3,
-      createdAt: DateTime.parse(json['created_at']),
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
       lastReviewedAt: json['last_reviewed_at'] != null ? DateTime.parse(json['last_reviewed_at']) : null,
       nextReviewDate: json['next_review_date'] != null ? DateTime.parse(json['next_review_date']) : null,
       repetitionCount: json['repetition_count'] ?? 0,

@@ -7,7 +7,6 @@ import '../core/providers.dart';
 import '../core/offline_sync_service.dart';
 import 'profile_settings_screen.dart';
 import 'change_password_screen.dart';
-import 'connected_accounts_screen.dart';
 import 'export_data_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'app_preferences_screen.dart';
@@ -51,10 +50,6 @@ class AccountSettingsScreen extends ConsumerWidget {
               'Update your login password',
               () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const ChangePasswordScreen()))),
-          _tile(context, Icons.link, 'Connected Accounts',
-              'View your login providers',
-              () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const ConnectedAccountsScreen()))),
 
           const SizedBox(height: 24),
 

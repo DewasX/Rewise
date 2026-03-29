@@ -7,6 +7,8 @@ import 'supabase_config.dart';
 import 'settings_service.dart';
 import 'package:flutter/material.dart';
 import 'user_service.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+import 'revenuecat_service.dart';
 
 // Global theme mode provider
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
@@ -24,17 +26,10 @@ final allTopicsProvider = FutureProvider<List<Topic>>((ref) async {
   return await service.getAllTopics();
 });
 
-// Provider for User Profile
+// Provider for User Profile — uses UserService for consistent name resolution
 final userProfileProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
-  final client = SupabaseConfig.client;
-  final userId = client?.auth.currentUser?.id;
-  if (client == null || userId == null) return null;
-
-  try {
-    return await client.from('users').select().eq('user_id', userId).maybeSingle();
-  } catch (e) {
-    return null;
-  }
+  final _userService = UserService();
+  return await _userService.getUserProfile();
 });
 
 // Provider for User's Subjects
@@ -48,6 +43,31 @@ final subjectsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async 
   } catch (e) {
     return [];
   }
+});
+
+// StateNotifier to track Rewise Pro status synchronously
+class ProStatusNotifier extends StateNotifier<bool> {
+  ProStatusNotifier() : super(false) {
+    _init();
+  }
+
+  void _init() async {
+    try {
+      final info = await Purchases.getCustomerInfo();
+      state = RevenueCatService.hasProEntitlement(info);
+      
+      Purchases.addCustomerInfoUpdateListener((info) {
+        state = RevenueCatService.hasProEntitlement(info);
+      });
+    } catch (e) {
+      debugPrint('Error loading customer info for Pro status: $e');
+    }
+  }
+}
+
+// Global provider for Pro true/false checks across the app
+final isProUserProvider = StateNotifierProvider<ProStatusNotifier, bool>((ref) {
+  return ProStatusNotifier();
 });
 
 // StateNotifier to manage the list of today's topics and their UI state
@@ -99,10 +119,25 @@ class TodaysTopicsNotifier extends StateNotifier<AsyncValue<List<Topic>>> {
 
     try {
       await _topicService.recordReview(topic, rating);
+      // Reload actual count from DB to correct any drift from failed reviews
+      _completedToday = await _userService.getReviewsCompletedToday();
     } catch (e) {
-      // If it fails (e.g. mock mode throws, or real DB throws), we can either revert or just log
-      // For this MVP, we want it to feel fast, so we accept the optimistic update
       // Optimistic update accepted — if backend fails, offline sync will retry
+    }
+  }
+
+  Future<void> skipTopic(Topic topic) async {
+    // Optimistically remove from list immediately for snappy UI
+    if (state.hasValue) {
+      final currentTopics = state.value!;
+      final updatedList = currentTopics.where((t) => t.id != topic.id).toList();
+      state = AsyncValue.data(updatedList);
+    }
+
+    try {
+      await _topicService.skipTopic(topic);
+    } catch (e) {
+      // Optimistic update accepted
     }
   }
 }

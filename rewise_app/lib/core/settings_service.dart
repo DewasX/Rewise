@@ -13,7 +13,7 @@ class SettingsService {
   Future<Map<String, String>> getPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     return {
-      'theme': prefs.getString(_themeKey) ?? 'system',
+      'theme': prefs.getString(_themeKey) ?? 'dark',
     };
   }
 
@@ -48,13 +48,24 @@ class SettingsService {
   // ── Delete Account ───────────────────────────────────────────────────────────
 
   /// Deletes all user data rows from all tables, then signs out.
-  /// Note: Hard auth-user deletion requires a server-side Edge Function.
-  Future<void> deleteAllUserData(String userId) async {
+  /// Hard auth-user deletion is handled securely via a Postgres RPC function.
+  Future<void> deleteAllUserData() async {
     final client = Supabase.instance.client;
-    await client.from('review_history').delete().eq('user_id', userId);
-    await client.from('topics').delete().eq('user_id', userId);
-    await client.from('subjects').delete().eq('user_id', userId);
-    await client.from('users').delete().eq('user_id', userId);
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      // Attempt true account deletion via RPC (removes from auth.users + cascades)
+      await client.rpc('delete_user');
+    } catch (e) {
+      // Fallback: If the user hasn't created the RPC function yet, wipe all public tables manually.
+      // Since NavigationShell now checks for the public.users row, hitting this fallback
+      // will still correctly force the user to Onboarding on their next login.
+      await client.from('review_history').delete().eq('user_id', userId);
+      await client.from('topics').delete().eq('user_id', userId);
+      await client.from('subjects').delete().eq('user_id', userId);
+      await client.from('users').delete().eq('user_id', userId);
+    }
   }
 }
 

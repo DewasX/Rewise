@@ -43,7 +43,10 @@ class SpacedRepetitionEngine {
     
     // Safety check enforcing >0 boundary guarantees math resolves seamlessly for new cards or complete failures
     double baseStability = currentStability > 0 ? currentStability : 1.0;
-    return baseStability * multipliers[rating]!;
+    double newStability = baseStability * multipliers[rating]!;
+    // Minimum stability floor prevents aggressive 1-day loops from chains of "Forgot"
+    if (newStability < 0.5) newStability = 0.5;
+    return newStability;
   }
 
   /// Calculate the new interval dynamically bounded by a target retention metric

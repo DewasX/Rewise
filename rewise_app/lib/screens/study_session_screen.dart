@@ -293,7 +293,10 @@ class _StudySessionScreenState extends ConsumerState<StudySessionScreen> {
           ),
           const SizedBox(height: 16),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(), // Skip logic can go here
+            onPressed: () async {
+              await ref.read(todaysTopicsProvider.notifier).skipTopic(widget.topic);
+              if (mounted) Navigator.of(context).pop();
+            },
             child: const Text('Skip for today', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
           )
         ],

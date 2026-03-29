@@ -4,6 +4,7 @@ import '../core/design_system.dart';
 import '../core/settings_service.dart';
 import '../core/offline_sync_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class DeleteAccountScreen extends StatefulWidget {
   const DeleteAccountScreen({super.key});
@@ -53,17 +54,26 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       // Flush pending offline data
       await OfflineSyncService().syncPendingReviews().catchError((_) {});
 
-      // Delete all data rows
-      await SettingsService().deleteAllUserData(userId);
+      // Delete all data rows and Auth user via RPC
+      await SettingsService().deleteAllUserData();
 
-      // Sign out
+      // Clear local caches completely
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('cached_todays_topics');
-      await prefs.remove('offline_pending_reviews');
-      await Supabase.instance.client.auth.signOut();
+      await prefs.clear(); // Aggressively clear ALL SharedPreferences
+
+      // Disconnect Google Sign-In to forcibly require account selection on next login
+      try {
+        await GoogleSignIn().disconnect();
+      } catch (_) {}
+      
+      // Attempt to sign out locally to clear session tokens. 
+      // The backend may throw an error since the user no longer exists, so we catch and ignore it.
+      try {
+        await Supabase.instance.client.auth.signOut();
+      } catch (_) {}
 
       if (mounted) {
-        // Hard reset to login screen to prevent Dashboard from rebuilding
+        // Hard reset to login screen to prevent Dashboard from rebuilding with dead data
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
       }
     } catch (e) {

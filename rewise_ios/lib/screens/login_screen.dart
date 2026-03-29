@@ -219,17 +219,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Center(
+                    child: Image.asset(
+                      'assets/logo_transparent.png',
+                      height: 100,
+                      width: 100,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   const Text(
                     'Rewise.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'AI Adaptive Repetition',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
-              ),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'AI Adaptive Repetition',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+                  ),
               const SizedBox(height: 48),
               TextField(
                 controller: _emailController,
@@ -290,20 +298,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     Expanded(child: Divider(color: Colors.white24)),
                   ],
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: signInWithGoogle,
-                  icon: const Icon(Icons.g_mobiledata, size: 28),
-                  label: const Text("Sign in with Google", style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) ...[
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: signInWithGoogle,
+                    icon: const Icon(Icons.g_mobiledata, size: 28),
+                    label: const Text("Sign in with Google", style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
-                ),
+                ],
                 if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: signInWithApple,
                     icon: const Icon(Icons.apple, size: 28),

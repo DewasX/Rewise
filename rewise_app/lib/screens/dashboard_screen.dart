@@ -7,6 +7,7 @@ import '../core/providers.dart';
 import '../core/offline_sync_service.dart';
 import 'study_session_screen.dart';
 import '../core/responsive_wrapper.dart';
+import '../core/user_service.dart';
 import 'account_settings_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -147,7 +148,8 @@ class DashboardScreen extends ConsumerWidget {
       greeting = 'Good evening';
     }
 
-    final userName = userProfile.value?['name'] ?? '';
+    final nameRaw = userProfile.value?['name'] ?? '';
+    final userName = UserService().sanitizeName(nameRaw);
 
     final nextReviewText = _getFormattedDate();
 
@@ -161,12 +163,13 @@ class DashboardScreen extends ConsumerWidget {
               Text(nextReviewText,
                   style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
               const SizedBox(height: 4),
-              Text('$greeting${userName.isNotEmpty ? ' $userName' : ''} 👋',
+              Text('$greeting${userName.isNotEmpty ? ' $userName' : ''}',
                   style: TextStyle(
                       color: Theme.of(context).textTheme.headlineMedium?.color,
                       fontSize: 24,
                       fontWeight: FontWeight.bold),
                   softWrap: true,
+                  overflow: TextOverflow.ellipsis,
                   maxLines: 2),
             ],
           ),

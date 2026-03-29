@@ -24,6 +24,7 @@ class _StudySessionScreenState extends ConsumerState<StudySessionScreen> {
   bool _isTimerRunning = false;
   bool _isRatingPanelVisible = false;
   bool _showSuccessAnimation = false;
+  int _newInterval = 0;
 
   @override
   void initState() {
@@ -52,10 +53,15 @@ class _StudySessionScreenState extends ConsumerState<StudySessionScreen> {
   }
 
   Future<void> _handleRating(MemoryRating rating) async {
+    // Calculate the new interval to display in the success overlay
+    final newStability = SpacedRepetitionEngine.calculateNewStability(widget.topic.stabilityValue, rating);
+    final newInterval = SpacedRepetitionEngine.calculateNewInterval(newStability);
+
     // 1. Trigger animation immediately for UX
     setState(() {
       _showSuccessAnimation = true;
       _isRatingPanelVisible = false;
+      _newInterval = newInterval;
     });
 
     // 2. Perform background logic via Provider
@@ -287,7 +293,10 @@ class _StudySessionScreenState extends ConsumerState<StudySessionScreen> {
           ),
           const SizedBox(height: 16),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(), // Skip logic can go here
+            onPressed: () async {
+              await ref.read(todaysTopicsProvider.notifier).skipTopic(widget.topic);
+              if (mounted) Navigator.of(context).pop();
+            },
             child: const Text('Skip for today', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
           )
         ],
@@ -356,7 +365,7 @@ class _StudySessionScreenState extends ConsumerState<StudySessionScreen> {
           const SizedBox(height: 24),
           Text('Memory Strength Increased!', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('Next review in ${widget.topic.intervalDays} days', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+          Text('Next review in $_newInterval days', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
         ],
       ),
     );

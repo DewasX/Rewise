@@ -47,7 +47,7 @@ class TopicService {
       'name': name,
       'estimated_minutes': estimatedMinutes,
       'difficulty': difficulty,
-    });
+    }).timeout(const Duration(seconds: 15));
   }
 
   Future<List<Topic>> getTodaysTopics() async {
@@ -62,12 +62,13 @@ class TopicService {
     if (userId == null) throw Exception('Your session has expired. Please sign in again.');
 
     try {
-      final String today = DateTime.now().toIso8601String().split('T')[0];
+      final String today = DateTime.now().toUtc().toIso8601String().split('T')[0];
       final response = await client
           .from('topics')
           .select()
           .eq('user_id', userId)
-          .or('next_review_date.lte.$today,next_review_date.is.null'); // Topics that are strictly due today or new
+          .or('next_review_date.lte.$today,next_review_date.is.null')
+          .timeout(const Duration(seconds: 15));
       
       final topics = (response as List).map((json) => Topic.fromJson(json)).toList();
       topics.sort((a, b) => b.priorityScore.compareTo(a.priorityScore));
@@ -100,7 +101,9 @@ class TopicService {
           .from('topics')
           .select()
           .eq('user_id', userId)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .limit(500)
+          .timeout(const Duration(seconds: 15));
       
       return (response as List).map((json) => Topic.fromJson(json)).toList();
     } catch (e) {
@@ -168,6 +171,23 @@ class TopicService {
       nextReviewDate: nextReview,
     );
     NotificationService().scheduleReviewNotification(updatedTopic);
+  }
+
+  Future<void> skipTopic(Topic topic) async {
+    final client = _client;
+    if (client == null) throw Exception('Unable to connect to the server. Please try again later.');
+
+    final tomorrow = DateTime.now().add(const Duration(days: 1)).toUtc();
+    final String tomorrowStr = tomorrow.toIso8601String().split('T')[0];
+
+    try {
+      await client.from('topics').update({
+        'next_review_date': tomorrowStr,
+      }).eq('id', topic.id);
+    } catch (e) {
+      // Fallback or ignore for now
+      debugPrint('Error skipping topic: $e');
+    }
   }
 
   Future<void> deleteTopic(String topicId) async {

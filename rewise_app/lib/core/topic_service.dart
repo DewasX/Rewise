@@ -173,6 +173,23 @@ class TopicService {
     NotificationService().scheduleReviewNotification(updatedTopic);
   }
 
+  Future<void> skipTopic(Topic topic) async {
+    final client = _client;
+    if (client == null) throw Exception('Unable to connect to the server. Please try again later.');
+
+    final tomorrow = DateTime.now().add(const Duration(days: 1)).toUtc();
+    final String tomorrowStr = tomorrow.toIso8601String().split('T')[0];
+
+    try {
+      await client.from('topics').update({
+        'next_review_date': tomorrowStr,
+      }).eq('id', topic.id);
+    } catch (e) {
+      // Fallback or ignore for now
+      debugPrint('Error skipping topic: $e');
+    }
+  }
+
   Future<void> deleteTopic(String topicId) async {
     final client = _client;
     if (client == null) throw Exception('Unable to connect to the server. Please try again later.');

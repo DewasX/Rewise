@@ -21,10 +21,6 @@ class AllTasksScreen extends ConsumerWidget {
         elevation: 0,
         title: Text('All Topics', style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color, fontWeight: FontWeight.bold)),
         iconTheme: Theme.of(context).iconTheme.copyWith(color: Theme.of(context).textTheme.titleLarge?.color),
-        actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.filter_list), onPressed: () {}),
-        ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -72,8 +68,8 @@ class AllTasksScreen extends ConsumerWidget {
                                 ),
                                 child: Text(
                                   subjectName,
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.white,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
                                     letterSpacing: 0.5,

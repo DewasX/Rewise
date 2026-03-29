@@ -20,22 +20,29 @@ class UserService {
     }
   }
 
+  String sanitizeName(String name) {
+    // Collapse multiple spaces and trim, allowing international characters and symbols
+    return name.trim().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
   Future<void> createUserProfile(String name) async {
+    final sanitizedName = sanitizeName(name);
     final userId = _client.auth.currentUser?.id;
     final email = _client.auth.currentUser?.email;
     if (userId == null) throw Exception('Your session has expired. Please sign in again.');
 
     await _client.from('users').upsert({
       'user_id': userId,
-      'name': name,
+      'name': sanitizedName,
       'email': email,
     }).timeout(const Duration(seconds: 15));
   }
 
   Future<void> updateName(String name) async {
+    final sanitizedName = sanitizeName(name);
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('Your session has expired. Please sign in again.');
-    await _client.from('users').update({'name': name}).eq('user_id', userId).timeout(const Duration(seconds: 15));
+    await _client.from('users').update({'name': sanitizedName}).eq('user_id', userId).timeout(const Duration(seconds: 15));
   }
 
   Future<int> getReviewsCompletedToday() async {

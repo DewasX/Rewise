@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,9 +17,11 @@ class NavigationShell extends ConsumerStatefulWidget {
 
 class _NavigationShellState extends ConsumerState<NavigationShell> with WidgetsBindingObserver {
   late final PageController _pageController;
-  Timer? _backgroundSyncTimer;
   RealtimeChannel? _topicsChannel;
   RealtimeChannel? _subjectsChannel;
+  DateTime? _lastBackPress;
+
+  DateTime? _lastRefresh;
 
   @override
   void initState() {
@@ -30,16 +31,22 @@ class _NavigationShellState extends ConsumerState<NavigationShell> with WidgetsB
     _pageController = PageController(initialPage: initialIndex);
     
     WidgetsBinding.instance.addObserver(this);
-    _checkProfile();
     _setupRealtimeSubscriptions();
-    _startBackgroundSync();
+    _lastRefresh = DateTime.now();
+    
+    // Ensure we check profile immediately upon shell load
+    // Also force refresh the profile provider so dashboard gets fresh data
+    // (critical after onboarding saves the name and navigates here)
+    Future.microtask(() {
+      ref.invalidate(userProfileProvider);
+      _checkProfile();
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
-    _backgroundSyncTimer?.cancel();
     _topicsChannel?.unsubscribe();
     _subjectsChannel?.unsubscribe();
     super.dispose();
@@ -48,12 +55,22 @@ class _NavigationShellState extends ConsumerState<NavigationShell> with WidgetsB
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Refresh data when app comes to foreground
-      _refreshAllData();
+      // Only refresh if more than 5 minutes passed since last refresh
+      final now = DateTime.now();
+      if (_lastRefresh == null || now.difference(_lastRefresh!) > const Duration(minutes: 5)) {
+        _refreshAllData();
+        _lastRefresh = now;
+      }
     }
   }
 
   void _refreshAllData() {
+    final client = Supabase.instance.client;
+    if (client.auth.currentUser == null) {
+      // Force logout to trigger the main listener redirect
+      client.auth.signOut().catchError((_) {});
+      return;
+    }
     ref.read(todaysTopicsProvider.notifier).loadTopics();
     ref.invalidate(allTopicsProvider);
     ref.invalidate(subjectsProvider);
@@ -101,16 +118,12 @@ class _NavigationShellState extends ConsumerState<NavigationShell> with WidgetsB
         .subscribe();
   }
 
-  void _startBackgroundSync() {
-    // Refresh from server every 5 minutes
-    _backgroundSyncTimer = Timer.periodic(const Duration(minutes: 5), (_) {
-      _refreshAllData();
-    });
-  }
-
   Future<void> _checkProfile() async {
     final session = Supabase.instance.client.auth.currentSession;
-    if (session == null) return;
+    if (session == null) {
+      if (mounted) Navigator.of(context).pushReplacementNamed('/login');
+      return;
+    }
 
     try {
       final response = await Supabase.instance.client
@@ -120,12 +133,16 @@ class _NavigationShellState extends ConsumerState<NavigationShell> with WidgetsB
           .maybeSingle();
 
       if (mounted) {
-        if (response == null || response['name'] == null) {
+        // If the public profile row doesn't exist, they are truly "new"
+        // Force the onboarding workflow.
+        if (response == null || response['name'] == null || response['name'].toString().isEmpty) {
           Navigator.of(context).pushReplacementNamed('/onboarding');
         }
       }
     } catch (e) {
-      // Ignore errors here, let them see dashboard if it fails
+      debugPrint('Error validating profile: $e');
+      // If network fails, let them proceed. If they truly don't exist, offline functionality might be weird,
+      // but we shouldn't block them entirely on app launch on weak cell service.
     }
   }
 
@@ -142,48 +159,74 @@ class _NavigationShellState extends ConsumerState<NavigationShell> with WidgetsB
       );
     }
 
-    return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (index) {
-          ref.read(navigationProvider.notifier).state = index;
-        },
-        children: const [
-          DashboardScreen(),
-          AnalyticsScreen(),
-          AllTasksScreen(),
-          AddTopicScreen(),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border(top: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1), width: 0.5)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: currentIndex,
-          onTap: (index) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        // If not on first tab, go to first tab instead of exiting
+        if (currentIndex != 0) {
+          ref.read(navigationProvider.notifier).state = 0;
+          _pageController.animateToPage(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+          return;
+        }
+        // Double-tap back to exit
+        final now = DateTime.now();
+        if (_lastBackPress != null && now.difference(_lastBackPress!) < const Duration(seconds: 2)) {
+          Navigator.of(context).pop();
+          return;
+        }
+        _lastBackPress = now;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Press back again to exit'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
+      child: Scaffold(
+        body: PageView(
+          controller: _pageController,
+          onPageChanged: (index) {
             ref.read(navigationProvider.notifier).state = index;
-            _pageController.animateToPage(
-              index,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            );
           },
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: AppColors.textSecondary,
-          type: BottomNavigationBarType.fixed,
-          showSelectedLabels: true,
-          showUnselectedLabels: true,
-          selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-          unselectedLabelStyle: const TextStyle(fontSize: 12),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'Dashboard'),
-            BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Analytics'),
-            BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: 'All Topics'),
-            BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline_rounded), label: 'Add Topic'),
+          children: const [
+            DashboardScreen(),
+            AnalyticsScreen(),
+            AllTasksScreen(),
+            AddTopicScreen(),
           ],
+        ),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border(top: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1), width: 0.5)),
+          ),
+          child: BottomNavigationBar(
+            currentIndex: currentIndex,
+            onTap: (index) {
+              ref.read(navigationProvider.notifier).state = index;
+              _pageController.animateToPage(
+                index,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            },
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            selectedItemColor: AppColors.primary,
+            unselectedItemColor: AppColors.textSecondary,
+            type: BottomNavigationBarType.fixed,
+            showSelectedLabels: true,
+            showUnselectedLabels: true,
+            selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: const TextStyle(fontSize: 12),
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'Dashboard'),
+              BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Analytics'),
+              BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: 'All Topics'),
+              BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline_rounded), label: 'Add Topic'),
+            ],
+          ),
         ),
       ),
     );

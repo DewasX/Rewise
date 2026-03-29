@@ -21,6 +21,8 @@ class _NavigationShellState extends ConsumerState<NavigationShell> with WidgetsB
   RealtimeChannel? _subjectsChannel;
   DateTime? _lastBackPress;
 
+  DateTime? _lastRefresh;
+
   @override
   void initState() {
     super.initState();
@@ -29,8 +31,11 @@ class _NavigationShellState extends ConsumerState<NavigationShell> with WidgetsB
     _pageController = PageController(initialPage: initialIndex);
     
     WidgetsBinding.instance.addObserver(this);
-    _checkProfile();
     _setupRealtimeSubscriptions();
+    _lastRefresh = DateTime.now();
+    
+    // Ensure we check profile immediately upon shell load
+    Future.microtask(_checkProfile);
   }
 
   @override
@@ -45,8 +50,12 @@ class _NavigationShellState extends ConsumerState<NavigationShell> with WidgetsB
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Refresh data when app comes to foreground
-      _refreshAllData();
+      // Only refresh if more than 5 minutes passed since last refresh
+      final now = DateTime.now();
+      if (_lastRefresh == null || now.difference(_lastRefresh!) > const Duration(minutes: 5)) {
+        _refreshAllData();
+        _lastRefresh = now;
+      }
     }
   }
 
@@ -106,7 +115,10 @@ class _NavigationShellState extends ConsumerState<NavigationShell> with WidgetsB
 
   Future<void> _checkProfile() async {
     final session = Supabase.instance.client.auth.currentSession;
-    if (session == null) return;
+    if (session == null) {
+      if (mounted) Navigator.of(context).pushReplacementNamed('/login');
+      return;
+    }
 
     try {
       final response = await Supabase.instance.client
@@ -116,12 +128,16 @@ class _NavigationShellState extends ConsumerState<NavigationShell> with WidgetsB
           .maybeSingle();
 
       if (mounted) {
-        if (response == null || response['name'] == null) {
+        // If the public profile row doesn't exist, they are truly "new"
+        // Force the onboarding workflow.
+        if (response == null || response['name'] == null || response['name'].toString().isEmpty) {
           Navigator.of(context).pushReplacementNamed('/onboarding');
         }
       }
     } catch (e) {
-      // Ignore errors here, let them see dashboard if it fails
+      debugPrint('Error validating profile: $e');
+      // If network fails, let them proceed. If they truly don't exist, offline functionality might be weird,
+      // but we shouldn't block them entirely on app launch on weak cell service.
     }
   }
 

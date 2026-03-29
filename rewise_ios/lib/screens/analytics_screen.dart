@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/design_system.dart';
 import '../core/providers.dart';
 import '../core/responsive_wrapper.dart';
@@ -125,39 +126,117 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _buildTrendCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppDesign.radius),
-        border: Border.all(color: Theme.of(context).dividerTheme.color ?? Colors.transparent),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Weekly Memory Trend',
-              style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color, fontSize: 15, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          const SizedBox(
-            height: 120,
-            child: Center(
-              child: Text(
-                'Review more topics to see your weekly trend',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                textAlign: TextAlign.center,
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _fetchWeeklyReviews(),
+      builder: (context, snapshot) {
+        final dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        final counts = List<int>.filled(7, 0);
+        int maxCount = 1;
+
+        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+          for (var row in snapshot.data!) {
+            final date = DateTime.parse(row['created_at']);
+            final weekday = date.weekday - 1; // 0=Mon, 6=Sun
+            counts[weekday]++;
+          }
+          maxCount = counts.reduce((a, b) => a > b ? a : b);
+          if (maxCount == 0) maxCount = 1;
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(AppDesign.radius),
+            border: Border.all(color: Theme.of(context).dividerTheme.color ?? Colors.transparent),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Weekly Review Activity',
+                  style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color, fontSize: 15, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 120,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: List.generate(7, (index) {
+                    final height = (counts[index] / maxCount) * 90;
+                    final isToday = DateTime.now().weekday - 1 == index;
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (counts[index] > 0)
+                          Text('${counts[index]}',
+                              style: TextStyle(
+                                color: isToday ? AppColors.primary : AppColors.textSecondary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              )),
+                        const SizedBox(height: 4),
+                        Container(
+                          width: 28,
+                          height: counts[index] == 0 ? 4 : height.clamp(8, 90),
+                          decoration: BoxDecoration(
+                            color: isToday
+                                ? AppColors.primary
+                                : (counts[index] > 0
+                                    ? AppColors.primary.withValues(alpha: 0.3)
+                                    : Theme.of(context).dividerTheme.color?.withValues(alpha: 0.15) ?? Colors.white10),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: dayLabels
+                    .asMap()
+                    .entries
+                    .map((e) => Text(e.value,
+                        style: TextStyle(
+                          color: DateTime.now().weekday - 1 == e.key
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
+                          fontSize: 10,
+                          fontWeight: DateTime.now().weekday - 1 == e.key ? FontWeight.bold : FontWeight.normal,
+                        )))
+                    .toList(),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-                .map((d) => Text(d, style: const TextStyle(color: AppColors.textSecondary, fontSize: 10)))
-                .toList(),
-          ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchWeeklyReviews() async {
+    try {
+      final client = Supabase.instance.client;
+      final userId = client.auth.currentUser?.id;
+      if (userId == null) return [];
+
+      // Get the start of the current week (Monday)
+      final now = DateTime.now();
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      final weekStart = DateTime(monday.year, monday.month, monday.day).toUtc().toIso8601String();
+
+      final response = await client
+          .from('review_history')
+          .select('created_at')
+          .eq('user_id', userId)
+          .gte('created_at', weekStart)
+          .timeout(const Duration(seconds: 10));
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
   }
 
   Widget _buildSubjectBreakdown(BuildContext context, List<dynamic> topics, List<Map<String, dynamic>>? subjects) {

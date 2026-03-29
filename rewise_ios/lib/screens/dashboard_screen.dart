@@ -7,6 +7,7 @@ import '../core/providers.dart';
 import '../core/offline_sync_service.dart';
 import 'study_session_screen.dart';
 import '../core/responsive_wrapper.dart';
+import '../core/user_service.dart';
 import 'account_settings_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -35,7 +36,13 @@ class DashboardScreen extends ConsumerWidget {
                       Text('Warning: $err', style: const TextStyle(color: AppColors.urgent)),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () => ref.read(todaysTopicsProvider.notifier).loadTopics(),
+                        onPressed: () {
+                          if (Supabase.instance.client.auth.currentUser == null) {
+                            Supabase.instance.client.auth.signOut();
+                          } else {
+                            ref.read(todaysTopicsProvider.notifier).loadTopics();
+                          }
+                        },
                         child: const Text('Retry / Load Mock Data'),
                       )
                     ],
@@ -141,7 +148,8 @@ class DashboardScreen extends ConsumerWidget {
       greeting = 'Good evening';
     }
 
-    final userName = userProfile.value?['name'] ?? '';
+    final nameRaw = userProfile.value?['name'] ?? '';
+    final userName = UserService().sanitizeName(nameRaw);
 
     final nextReviewText = _getFormattedDate();
 
@@ -155,12 +163,13 @@ class DashboardScreen extends ConsumerWidget {
               Text(nextReviewText,
                   style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
               const SizedBox(height: 4),
-              Text('$greeting${userName.isNotEmpty ? ' $userName' : ''} 👋',
+              Text('$greeting${userName.isNotEmpty ? ' $userName' : ''}',
                   style: TextStyle(
                       color: Theme.of(context).textTheme.headlineMedium?.color,
                       fontSize: 24,
                       fontWeight: FontWeight.bold),
                   softWrap: true,
+                  overflow: TextOverflow.ellipsis,
                   maxLines: 2),
             ],
           ),
@@ -200,13 +209,23 @@ class DashboardScreen extends ConsumerWidget {
           child: CircleAvatar(
             radius: 18,
             backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-            child: Text(
-              userName.isNotEmpty ? userName[0].toUpperCase() : '?',
-              style: const TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14),
-            ),
+            backgroundImage: () {
+              final userMeta = Supabase.instance.client.auth.currentUser?.userMetadata;
+              final avatarUrl = userMeta?['avatar_url'] ?? userMeta?['picture'];
+              return avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null;
+            }(),
+            child:Builder(builder: (context) {
+              final userMeta = Supabase.instance.client.auth.currentUser?.userMetadata;
+              final avatarUrl = userMeta?['avatar_url'] ?? userMeta?['picture'];
+              if (avatarUrl != null && avatarUrl.isNotEmpty) return const SizedBox.shrink();
+              return Text(
+                userName.isNotEmpty ? userName[0].toUpperCase() : '?',
+                style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14),
+              );
+            }),
           ),
         ),
       ],

@@ -198,16 +198,45 @@ class _AddTopicScreenState extends ConsumerState<AddTopicScreen> {
           padding: const EdgeInsets.all(8.0),
           child: CircleAvatar(
             backgroundColor: Theme.of(context).colorScheme.surface,
-            child: IconButton(
-              icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color, size: 20),
-              onPressed: () {
-                if (Navigator.canPop(context)) {
-                  Navigator.pop(context);
-                } else {
-                  ref.read(navigationProvider.notifier).state = 0;
-                }
-              },
-            ),
+            backgroundImage: () {
+              final userMeta = Supabase.instance.client.auth.currentUser?.userMetadata;
+              final avatarUrl = userMeta?['avatar_url'] ?? userMeta?['picture'];
+              return avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null;
+            }(),
+            child: Builder(builder: (context) {
+              final userMeta = Supabase.instance.client.auth.currentUser?.userMetadata;
+              final avatarUrl = userMeta?['avatar_url'] ?? userMeta?['picture'];
+              if (avatarUrl != null && avatarUrl.isNotEmpty) {
+                // If we have an image, overlay the back button with a semi-transparent background
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                    onPressed: () {
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      } else {
+                        ref.read(navigationProvider.notifier).state = 0;
+                      }
+                    },
+                  ),
+                );
+              }
+              // Fallback default back button
+              return IconButton(
+                icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color, size: 20),
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    ref.read(navigationProvider.notifier).state = 0;
+                  }
+                },
+              );
+            }),
           ),
         ),
         title: Text('Add Topic', style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color, fontWeight: FontWeight.bold)),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/design_system.dart';
 import '../core/user_service.dart';
@@ -85,6 +86,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     // Play initial animation
     _iconAnimController.forward();
+
+    // Pre-fill name from OAuth if available
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      final name = user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '';
+      if (name.isNotEmpty) {
+        _nameController.text = _userService.sanitizeName(name);
+      }
+    }
   }
 
   @override
@@ -243,47 +253,50 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     const SizedBox(height: 32),
 
                     // CTA Button
-                    if (!_pages[_currentPage].isNamePage)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _nextPage,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: pageData.accentColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Next',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: pageData.accentColor ==
-                                          const Color(0xFFFACC15)
-                                      ? Colors.black
-                                      : Colors.white,
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: _isLoading
+                          ? Center(
+                              child: CircularProgressIndicator(
+                                color: pageData.accentColor,
+                              ),
+                            )
+                          : ElevatedButton(
+                              onPressed: pageData.isNamePage ? _saveProfile : _nextPage,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: pageData.accentColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
+                                elevation: 0,
                               ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                Icons.arrow_forward_rounded,
-                                size: 20,
-                                color: pageData.accentColor ==
-                                        const Color(0xFFFACC15)
-                                    ? Colors.black
-                                    : Colors.white,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    pageData.isNamePage ? 'Get Started' : 'Next',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: pageData.accentColor == const Color(0xFFFACC15)
+                                          ? Colors.black
+                                          : Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    pageData.isNamePage ? Icons.rocket_launch_rounded : Icons.arrow_forward_rounded,
+                                    size: 20,
+                                    color: pageData.accentColor == const Color(0xFFFACC15)
+                                        ? Colors.black
+                                        : Colors.white,
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
+                            ),
+                    ),
                   ],
                 ),
               ),
@@ -295,175 +308,139 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildPage(_OnboardingPageData page, int index) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Spacer(flex: 1),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(height: page.isNamePage ? 40 : 80), // Less top spacing for name page
 
-          // Animated icon with glow
-          AnimatedBuilder(
-            animation: Listenable.merge([_iconAnimController, _glowAnimController]),
-            builder: (context, child) {
-              return Transform.scale(
-                scale: _iconScale.value,
-                child: Opacity(
-                  opacity: _iconFade.value.clamp(0.0, 1.0),
-                  child: Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: page.accentColor.withValues(alpha: 0.12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: page.accentColor
-                              .withValues(alpha: 0.3 * _glowPulse.value),
-                          blurRadius: 60 * _glowPulse.value,
-                          spreadRadius: 10 * _glowPulse.value,
+                // Animated icon with glow
+                AnimatedBuilder(
+                  animation: Listenable.merge([_iconAnimController, _glowAnimController]),
+                  builder: (context, child) {
+                    final useLogo = page.isNamePage || page.title.contains('Rewise');
+                    return Transform.scale(
+                      scale: _iconScale.value,
+                      child: Opacity(
+                        opacity: _iconFade.value.clamp(0.0, 1.0),
+                        child: Container(
+                          width: page.isNamePage ? 100 : 140,
+                          height: page.isNamePage ? 100 : 140,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: page.accentColor.withValues(alpha: 0.12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: page.accentColor
+                                    .withValues(alpha: 0.3 * _glowPulse.value),
+                                blurRadius: 60 * _glowPulse.value,
+                                spreadRadius: 10 * _glowPulse.value,
+                              ),
+                            ],
+                          ),
+                          child: useLogo
+                              ? Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Image.asset('assets/icon.png'),
+                                )
+                              : Icon(
+                                  page.icon,
+                                  size: page.isNamePage ? 48 : 64,
+                                  color: page.accentColor,
+                                ),
                         ),
-                      ],
-                    ),
-                    child: Icon(
-                      page.icon,
-                      size: 64,
-                      color: page.accentColor,
-                    ),
+                      ),
+                    );
+                  },
+                ),
+
+                SizedBox(height: page.isNamePage ? 32 : 48),
+
+                // Title
+                Text(
+                  page.title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                    height: 1.2,
                   ),
                 ),
-              );
-            },
-          ),
+                const SizedBox(height: 16),
 
-          const SizedBox(height: 48),
+                // Subtitle
+                Text(
+                  page.subtitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                ),
 
-          // Title
-          Text(
-            page.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 16),
+                if (page.isNamePage) ...[
+                  const SizedBox(height: 48), // Direct space to input
 
-          // Subtitle
-          Text(
-            page.subtitle,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.6),
-              fontSize: 16,
-              height: 1.5,
-            ),
-          ),
-
-          if (page.isNamePage) ...[
-            const SizedBox(height: 40),
-
-            // Feature chips
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                _buildFeatureChip('🧠', 'Spaced Repetition', page.accentColor),
-                _buildFeatureChip('📊', 'Memory Tracking', page.accentColor),
-                _buildFeatureChip('⚡', 'AI Scheduling', page.accentColor),
-                _buildFeatureChip('🔔', 'Smart Reminders', page.accentColor),
+                  // Name input
+                  TextField(
+                    controller: _nameController,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      hintText: 'What should we call you?',
+                      hintStyle: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        fontSize: 16,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.08),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: page.accentColor.withValues(alpha: 0.5),
+                          width: 1.5,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 18),
+                    ),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                    ],
+                    maxLength: 50,
+                    buildCounter: (context,
+                            {required currentLength,
+                            required isFocused,
+                            required maxLength}) =>
+                        null,
+                  ),
+                ],
+                const SizedBox(height: 100), // Space for button section overlap
               ],
             ),
-
-            const SizedBox(height: 32),
-
-            // Name input
-            TextField(
-              controller: _nameController,
-              textAlign: TextAlign.center,
-              decoration: InputDecoration(
-                hintText: 'What should we call you?',
-                hintStyle: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.3),
-                  fontSize: 16,
-                ),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.08),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(
-                    color: page.accentColor.withValues(alpha: 0.5),
-                    width: 1.5,
-                  ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 18),
-              ),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-              textCapitalization: TextCapitalization.words,
-              maxLength: 50,
-              buildCounter: (context,
-                      {required currentLength,
-                      required isFocused,
-                      required maxLength}) =>
-                  null,
-            ),
-
-            const SizedBox(height: 20),
-
-            // Get Started button
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: _isLoading
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        color: page.accentColor,
-                      ),
-                    )
-                  : ElevatedButton(
-                      onPressed: _saveProfile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: page.accentColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Get Started',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Icon(Icons.rocket_launch_rounded, size: 20),
-                        ],
-                      ),
-                    ),
-            ),
-          ],
-
-          const Spacer(flex: 2),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 

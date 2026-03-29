@@ -105,6 +105,21 @@ class TodaysTopicsNotifier extends StateNotifier<AsyncValue<List<Topic>>> {
       // Optimistic update accepted — if backend fails, offline sync will retry
     }
   }
+
+  Future<void> skipTopic(Topic topic) async {
+    // Optimistically remove from list immediately for snappy UI
+    if (state.hasValue) {
+      final currentTopics = state.value!;
+      final updatedList = currentTopics.where((t) => t.id != topic.id).toList();
+      state = AsyncValue.data(updatedList);
+    }
+
+    try {
+      await _topicService.skipTopic(topic);
+    } catch (e) {
+      // Optimistic update accepted
+    }
+  }
 }
 
 // Global provider for the topics state

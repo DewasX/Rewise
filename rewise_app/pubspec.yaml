@@ -1,6 +1,6 @@
 name: rewise_app
 description: AI Adaptive Repetition & Automatic Study Planner
-version: 1.2.0+4
+version: 1.3.0+7
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

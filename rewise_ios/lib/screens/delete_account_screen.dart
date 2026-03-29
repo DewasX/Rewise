@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/design_system.dart';
 import '../core/settings_service.dart';
 import '../core/offline_sync_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class DeleteAccountScreen extends StatefulWidget {
   const DeleteAccountScreen({super.key});
@@ -52,21 +54,35 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       // Flush pending offline data
       await OfflineSyncService().syncPendingReviews().catchError((_) {});
 
-      // Delete all data rows
-      await SettingsService().deleteAllUserData(userId);
+      // Delete all data rows and Auth user via RPC
+      await SettingsService().deleteAllUserData();
 
-      // Sign out (auth user deletion requires Edge Function in production)
-      await Supabase.instance.client.auth.signOut();
+      // Clear local caches completely
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); // Aggressively clear ALL SharedPreferences
+
+      // Disconnect Google Sign-In to forcibly require account selection on next login
+      try {
+        await GoogleSignIn().disconnect();
+      } catch (_) {}
+      
+      // Attempt to sign out locally to clear session tokens. 
+      // The backend may throw an error since the user no longer exists, so we catch and ignore it.
+      try {
+        await Supabase.instance.client.auth.signOut();
+      } catch (_) {}
 
       if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        // Hard reset to login screen to prevent Dashboard from rebuilding with dead data
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Delete account error: $e');
       if (mounted) {
         setState(() => _deleting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Unable to delete account. Please try again.'),
+              content: Text('Unable to delete account. Please check your connection.'),
               backgroundColor: AppColors.urgent),
         );
       }
