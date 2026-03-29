@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Support & Help - Rewise</title>
+    <title>Support Center - Rewise</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -24,71 +24,79 @@
 
     <!-- Header Section -->
     <header class="support-header">
-        <div class="container text-center" style="padding-top: 10rem; padding-bottom: 4rem;">
-            <h1>Support & Help</h1>
-            <p class="subtitle">Everything you need to know about using Rewise.</p>
+        <div class="container text-center" style="padding-top: 10rem; padding-bottom: 2rem;">
+            <h1>Support & Help Center</h1>
+            <p class="subtitle mt-2">Find answers, master the app, or get in touch directly.</p>
         </div>
     </header>
 
-    <!-- Support Content -->
-    <section id="support-content" class="container container-sm" style="padding-bottom: 6rem;">
+    <main class="container container-sm" style="padding-bottom: 6rem;">
         
-        <!-- Contact Section -->
-        <div class="support-card mb-4">
-            <h2>Contact Us</h2>
-            <p>If you have any questions, bug reports, or feedback, please reach out to us directly at:</p>
-            <p class="mt-2"><a href="mailto:xaxaholdings@gmail.com" class="text-orange" style="font-size: 1.25rem; font-weight: 600; text-decoration: none;">xaxaholdings@gmail.com</a></p>
+        <!-- Contact Banner -->
+        <div class="contact-banner mb-4">
+            <div class="contact-icon">✉️</div>
+            <div>
+                <h3 style="font-size: 1.5rem; margin-bottom: 0.25rem;">We're here to help</h3>
+                <p class="opacity-60">Reach out for bug reports, feedback, or account help.</p>
+            </div>
+            <a href="mailto:xaxaholdings@gmail.com" class="btn btn-orange pulse-strong" style="margin-left: auto; border-radius: 99px; padding: 1rem 2rem;">
+                xaxaholdings@gmail.com
+            </a>
         </div>
 
-        <!-- How to use Section -->
-        <div class="support-card mb-4">
-            <h2>How to use Rewise</h2>
-            <div class="instructions-list mt-3">
-                <div class="instruction-step">
-                    <div class="step-icon">1</div>
-                    <div class="step-text">
-                        <h3>Add a Topic</h3>
-                        <p>Start by adding a subject or topic you need to study. You can set the estimated study time and difficulty.</p>
-                    </div>
+        <!-- How to use Rewise -->
+        <section style="margin-top: 5rem; margin-bottom: 5rem;">
+            <div class="text-center mb-4">
+                <span class="badge">Quick Start</span>
+                <h2>How to use Rewise</h2>
+            </div>
+            <div class="guide-grid">
+                <div class="guide-step">
+                    <div class="guide-num">1</div>
+                    <h3 style="margin-bottom: 0.5rem;">Add a Topic</h3>
+                    <p class="small-text opacity-60">Enter the subject you need to study, set its difficulty, and let our AI digest it.</p>
                 </div>
-                <div class="instruction-step">
-                    <div class="step-icon">2</div>
-                    <div class="step-text">
-                        <h3>Study Session</h3>
-                        <p>Complete your first study session. Rewise will automatically schedule the next optimal time for you to review it based on spaced repetition algorithms.</p>
-                    </div>
+                <div class="guide-step">
+                    <div class="guide-num">2</div>
+                    <h3 style="margin-bottom: 0.5rem;">Take a Session</h3>
+                    <p class="small-text opacity-60">Complete short study blocks guided by AI-generated questions and automatic summaries.</p>
                 </div>
-                <div class="instruction-step">
-                    <div class="step-icon">3</div>
-                    <div class="step-text">
-                        <h3>Review & Master</h3>
-                        <p>Check your Dashboard daily. Rewise tells you exactly what to review and when, automatically adjusting if you forget something.</p>
-                    </div>
+                <div class="guide-step">
+                    <div class="guide-num">3</div>
+                    <h3 style="margin-bottom: 0.5rem;">Build Memory</h3>
+                    <p class="small-text opacity-60">Rewise manages your review schedule automatically. Just log in when reminded.</p>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- FAQ Section -->
-        <div class="support-card">
-            <h2>Frequently Asked Questions</h2>
-            
-            <div class="faq-item mt-3">
-                <h3>Is Rewise completely free?</h3>
-                <p>During our early access and closed testing phase, Rewise is completely free for all testers.</p>
+        <section style="margin-bottom: 4rem;">
+            <div class="text-center mb-4">
+                <h2>Frequently Asked Questions</h2>
             </div>
-            
-            <div class="faq-item mt-3">
-                <h3>Why do I need to join a Google Group?</h3>
-                <p>Google Play policies require apps in "Closed Testing" to manage tester access via Google Groups. Once you join the group, you get permission to download the app.</p>
+            <div class="faq-accordion">
+                <details class="faq-details">
+                    <summary class="faq-summary">Is Rewise completely free? <span class="faq-chevron">▼</span></summary>
+                    <div class="faq-content">
+                        <p>Yes. During our exclusive closed testing phase, Rewise gives you unrestricted access perfectly free of charge.</p>
+                    </div>
+                </details>
+                <details class="faq-details">
+                    <summary class="faq-summary">Why am I required to join a Google Group? <span class="faq-chevron">▼</span></summary>
+                    <div class="faq-content">
+                        <p>Google Play Store policies require that apps in a "Closed Testing" phase strictly manage their tester lists using Google Groups. By joining with 2 clicks, you bypass the restriction automatically.</p>
+                    </div>
+                </details>
+                <details class="faq-details">
+                    <summary class="faq-summary">How does the AI Engine work? <span class="faq-chevron">▼</span></summary>
+                    <div class="faq-content">
+                        <p>Our proprietary spaced-repetition AI instantly analyzes your inputs and generates tailored practice questions on the fly, saving you from manually writing flashcards.</p>
+                    </div>
+                </details>
             </div>
+        </section>
 
-            <div class="faq-item mt-3">
-                <h3>How does the AI work?</h3>
-                <p>Rewise uses advanced AI to process your study topics and instantly generate practice questions and dynamic summaries, saving you hours of prep time.</p>
-            </div>
-        </div>
-
-    </section>
+    </main>
 
     <!-- Footer -->
     <footer>
@@ -97,6 +105,10 @@
                 <img src="assets/logo.jpg" alt="Rewise Logo" class="logo-img sm" loading="lazy">
                 Rewise
             </div>
+            <p class="small-text mb-1">
+                <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s; margin-right: 15px;">Home</a>
+                <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;">Privacy Policy</a>
+            </p>
             <p class="small-text">&copy; 2026 Rewise App. All rights reserved.</p>
         </div>
     </footer>
